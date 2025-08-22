@@ -13,7 +13,7 @@ Mitra Chatbot is an AI-powered conversational assistant built using **Streamlit*
 
 ## Demo
 
-![Chat Interface Demo](Screenshot2025-08-22214850.png)
+![Chat Interface Demo](demo.png)
 
 ## Installation
 
