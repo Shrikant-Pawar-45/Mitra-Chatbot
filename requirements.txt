@@ -1,0 +1,9 @@
+streamlit>=1.36.0
+pillow>=10.4.0
+PyPDF2>=3.0.1
+gTTS>=2.5.1
+pyttsx3>=2.90
+pywin32>=306; platform_system=="Windows"
+comtypes>=1.4.5; platform_system=="Windows"
+requests>=2.32.3
+elevenlabs>=1.6.0

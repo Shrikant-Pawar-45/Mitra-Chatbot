@@ -1,0 +1,12 @@
+# Normalize text files and enforce LF for source files
+* text=auto
+
+# Enforce LF for common code/config types
+*.py   text eol=lf
+*.toml text eol=lf
+*.txt  text eol=lf
+*.md   text eol=lf
+*.sh   text eol=lf
+
+# Keep Windows EOL where appropriate
+*.bat  text eol=crlf
