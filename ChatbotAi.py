@@ -207,11 +207,6 @@ def _elevenlabs_secrets():
         female_voice_id = st.secrets.get("ELEVENLABS_VOICE_FEMALE")
     except Exception:
         pass
-    # Defaults provided by user if not set in secrets
-    if not male_voice_id:
-        male_voice_id = "nPczCjzI2devNBz1zQrb"
-    if not female_voice_id:
-        female_voice_id = "Xb7hH8MSUJpSbSDYk0k2"
     return api_key, male_voice_id, female_voice_id
 
 
@@ -224,11 +219,40 @@ def _synthesize_with_elevenlabs(text: str, gender: str) -> tuple[bytes, str, str
     # Prefer explicit voice IDs from secrets
     voice_id = male_id if g.startswith("m") else female_id
 
-    # Try official SDK by voice name if no voice_id provided
+    # Try modern SDK (v1+) first: resolve voice by name if ID not provided
     try:
         if voice_id is None:
             try:
-                from elevenlabs import generate as el_generate, set_api_key as el_set_key
+                from elevenlabs.client import ElevenLabs  # v1+ SDK
+                client = ElevenLabs(api_key=api_key)
+                target_name = "Adam" if g.startswith("m") else "Bella"
+                voices = getattr(client.voices, "get_all")()
+                # voices.voices is a list in v1 SDK
+                found = None
+                for v in getattr(voices, "voices", []) or voices:
+                    name = getattr(v, "name", "") or ""
+                    if name.lower() == target_name.lower():
+                        found = getattr(v, "voice_id", None) or getattr(v, "id", None)
+                        if found:
+                            break
+                if found:
+                    voice_id = found
+                    # Convert text to speech using v1 SDK; returns chunk iterator
+                    chunks = client.text_to_speech.convert(
+                        voice_id=voice_id,
+                        model_id="eleven_turbo_v2_5",
+                        text=text,
+                    )
+                    audio_bytes = b"".join(chunks)
+                    if audio_bytes:
+                        return audio_bytes, "audio/mpeg", f"speech_{g}.mp3"
+            except Exception:
+                pass
+
+        # Try legacy SDK (pre-v1) by voice name if available
+        if voice_id is None:
+            try:
+                from elevenlabs import generate as el_generate, set_api_key as el_set_key  # legacy API
                 el_set_key(api_key)
                 voice_name = "Adam" if g.startswith("m") else "Bella"
                 audio = el_generate(text=text, voice=voice_name, model="eleven_turbo_v2")
@@ -237,7 +261,7 @@ def _synthesize_with_elevenlabs(text: str, gender: str) -> tuple[bytes, str, str
             except Exception:
                 pass
 
-        # REST fallback (requires voice_id)
+        # REST fallback (requires a concrete voice_id)
         if voice_id:
             url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
             headers = {
